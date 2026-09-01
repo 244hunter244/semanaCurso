@@ -5,8 +5,9 @@ const deathDisplay = document.getElementById('deathCount');
 const keys = {};
 let deaths = 0;
 
-// Array para armazenar as marcas permanentes de sangue/tinta
-const bloodSplatters = [];
+// Lista de manchas fixas (com limite de quantidade)
+let bloodSplatters = [];
+const MAX_SPLATTERS = 150; 
 
 const player = new Player(50, 300);
 
@@ -24,48 +25,56 @@ const hazards = [
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// Função para criar respingos permanentes onde o jogador morreu
-function addBloodSplatter(x, y) {
-    for (let i = 0; i < 12; i++) {
+// Função ajustada para criar a mancha de morte sem achatar/bugar
+function addDeathSplatter(x, y) {
+    const particleCount = 8;
+    for (let i = 0; i < particleCount; i++) {
         bloodSplatters.push({
-            x: x + (Math.random() * 20 - 5),
-            y: y + (Math.random() * 20 - 5),
-            size: Math.random() * 6 + 2,
-            color: '#a93226'
+            x: x + (Math.random() * 16 - 2),
+            y: y + (Math.random() * 16 - 2),
+            w: Math.random() * 6 + 4,
+            h: Math.random() * 6 + 4,
+            color: '#80091c'
         });
+    }
+
+    // Mantém o limite para não poluir a tela e nem pesar o jogo
+    if (bloodSplatters.length > MAX_SPLATTERS) {
+        bloodSplatters = bloodSplatters.slice(bloodSplatters.length - MAX_SPLATTERS);
     }
 }
 
 function gameLoop() {
     player.update(keys, platforms, bloodSplatters);
 
-    // Checar morte por espinhos
+    // Morte por obstáculo
     for (let h of hazards) {
         if (player.collidesWith(h)) {
             deaths++;
             deathDisplay.textContent = deaths;
-            addBloodSplatter(player.x, player.y); // Adiciona marca da morte
+            addDeathSplatter(player.x, player.y);
             player.reset();
         }
     }
 
-    // Checar vitória
+    // Vitória
     const goal = platforms[3];
     if (player.collidesWith(goal)) {
         salvarPontuacao('Visitante', deaths);
         alert('Fase concluída!');
         player.reset();
         deaths = 0;
+        bloodSplatters = []; // Limpa o cenário ao reiniciar a fase
         deathDisplay.textContent = deaths;
     }
 
     // Limpar tela
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Desenhar marcas de sangue salvas no cenário
+    // 1. Desenhar manchas fixas
     bloodSplatters.forEach(b => {
         ctx.fillStyle = b.color;
-        ctx.fillRect(b.x, b.y, b.size, b.size);
+        ctx.fillRect(b.x, b.y, b.w, b.h);
     });
 
     // 2. Desenhar plataformas
@@ -76,7 +85,7 @@ function gameLoop() {
     ctx.fillStyle = '#c0392b';
     hazards.forEach(h => ctx.fillRect(h.x, h.y, h.width, h.height));
 
-    // 4. Desenhar jogador e seu rastro ativo
+    // 4. Desenhar jogador e seu rastro suave
     player.draw(ctx);
 
     requestAnimationFrame(gameLoop);

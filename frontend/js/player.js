@@ -16,23 +16,33 @@ class Player {
         this.wallSide = 0;
 
         this.wallJumpTimer = 0;
-        this.canJump = true; 
+        this.canJump = true;
         
-        // Histórico de posições para o rastro em movimento
-        this.trail = [];
+        // Rastro temporário de movimento (desaparece gradualmente)
+        this.motionTrail = [];
     }
 
     update(keys, platforms, bloodSplatters) {
-        // Guarda a posição atual para desenhar o rastro em movimento
-        this.trail.push({ x: this.x, y: this.y });
-        if (this.trail.length > 8) this.trail.shift(); // Mantém apenas os últimos 8 frames
+        // Registra o rastro de movimento atual
+        if (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1) {
+            this.motionTrail.push({ x: this.x, y: this.y, alpha: 0.5 });
+        }
 
-        // Se estiver deslizando na parede, deixa marcas permanentes nela!
-        if (this.isTouchingWall && !this.isGrounded && this.vy > 0 && Math.random() > 0.4) {
+        // Atualiza a transparência do rastro até sumir
+        for (let i = this.motionTrail.length - 1; i >= 0; i--) {
+            this.motionTrail[i].alpha -= 0.05;
+            if (this.motionTrail[i].alpha <= 0) {
+                this.motionTrail.splice(i, 1);
+            }
+        }
+
+        // Marcações pequenas na parede (controladas para não acumular excessivamente)
+        if (this.isTouchingWall && !this.isGrounded && this.vy > 0 && Math.random() < 0.2) {
             bloodSplatters.push({
                 x: this.wallSide === 1 ? this.x + this.width - 2 : this.x - 2,
-                y: this.y + Math.random() * this.height,
-                size: Math.random() * 4 + 2,
+                y: this.y + (Math.random() * (this.height - 4)),
+                w: 3,
+                h: 5,
                 color: '#900c3f'
             });
         }
@@ -61,14 +71,14 @@ class Player {
             if (this.isGrounded) {
                 this.vy = this.jumpForce;
                 this.isGrounded = false;
-                this.canJump = false; 
+                this.canJump = false;
             } else if (this.isTouchingWall && this.vy > 0) {
                 this.vy = this.jumpForce;
-                this.vx = -this.wallSide * 8; 
-                this.x += -this.wallSide * 5; 
+                this.vx = -this.wallSide * 8;
+                this.x += -this.wallSide * 5;
                 this.isTouchingWall = false;
                 this.canJump = false;
-                this.wallJumpTimer = 9; 
+                this.wallJumpTimer = 9;
             }
         }
 
@@ -127,18 +137,17 @@ class Player {
         this.vy = 0;
         this.wallJumpTimer = 0;
         this.canJump = true;
-        this.trail = [];
+        this.motionTrail = [];
     }
 
     draw(ctx) {
-        // Desenha o rastro em movimento com transparência
-        this.trail.forEach((pos, index) => {
-            const alpha = (index + 1) / this.trail.length;
-            ctx.fillStyle = `rgba(192, 57, 43, ${alpha * 0.4})`;
-            ctx.fillRect(pos.x, pos.y, this.width, this.height);
+        // Desenha o rastro suave de movimento em fade-out
+        this.motionTrail.forEach(t => {
+            ctx.fillStyle = `rgba(192, 57, 43, ${t.alpha})`;
+            ctx.fillRect(t.x, t.y, this.width, this.height);
         });
 
-        // Desenha o jogador principal
+        // Desenha o personagem
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }
