@@ -17,63 +17,65 @@ let platforms = [];
 let hazards = [];
 
 let nextX = 0;
-let lastY = 300; // Guarda a altura da última plataforma para calcular subidas
+let currentY = 300; // Altura atual do chão
 
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
 function generateChunk() {
-    // Plataformas significativamente mais longas (400px a 700px)
-    const platformWidth = Math.random() * 300 + 400; 
-    const platformY = Math.random() * 200 + 120; // Variação de altura
+    // Comprimento da seção atual do chão (bem longo)
+    const sectionWidth = Math.random() * 300 + 400; 
+    
+    // Define a nova altura da próxima seção do chão
+    const nextY = Math.random() * 180 + 120; 
+    const heightDifference = currentY - nextY;
 
-    // Se a subida for maior que 80px (impossível de saltar diretamente):
-    if (lastY - platformY > 80) {
-        // Cria uma coluna/parede vertical cinza para usar Wall Jump
-        const wallHeight = (lastY - platformY) + 40;
+    // Se houver uma subida/parede alta para escalar
+    if (heightDifference > 70) {
+        // Parede/Coluna vertical no ponto de conexão para permitir Wall Jump
         platforms.push({
             x: nextX,
-            y: platformY,
-            width: 25, // Coluna fina e alta
-            height: wallHeight
+            y: nextY,
+            width: 25,
+            height: heightDifference + 20
         });
     }
 
-    // Plataforma principal
+    // Adiciona o novo segmento de chão
     platforms.push({
         x: nextX,
-        y: platformY,
-        width: platformWidth,
-        height: 20
+        y: nextY,
+        width: sectionWidth,
+        height: 300 // Altura grande para preencher a parte de baixo da tela
     });
 
-    // Obstáculos pequenos (apenas 40px) para ser possível esquivar correndo
-    const hazardChance = Math.min(0.4, Math.max(0, (score - 60) / 250));
+    // Chance de obstáculos (espinhos) sobre o chão contínuo
+    const hazardChance = Math.min(0.4, Math.max(0, (score - 50) / 200));
 
-    if (Math.random() < hazardChance && platformWidth > 450) {
+    if (Math.random() < hazardChance && sectionWidth > 350) {
         hazards.push({
-            x: nextX + (platformWidth / 2),
-            y: platformY - 15,
-            width: 40, // Espinho bem menor
+            x: nextX + (sectionWidth / 2),
+            y: nextY - 15,
+            width: 45,
             height: 15
         });
     }
 
-    lastY = platformY; // Atualiza a última altura
-    const gap = Math.random() * 80 + 60; // Buraco pequeno entre plataformas
-    nextX += platformWidth + gap;
+    // Atualiza a posição para o próximo segmento sem deixar NENHUM buraco
+    currentY = nextY;
+    nextX += sectionWidth;
 }
 
 function initWorld() {
-    // Plataforma inicial extensa para acelerar livremente
+    // Chão inicial longo e estável
     platforms = [
-        { x: 0, y: 300, width: 800, height: 20 } 
+        { x: 0, y: 300, width: 800, height: 300 } 
     ];
     hazards = [];
-    nextX = 850;
-    lastY = 300;
+    nextX = 800;
+    currentY = 300;
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
         generateChunk();
     }
 }
@@ -108,14 +110,15 @@ function gameLoop() {
         generateChunk();
     }
 
+    // Mantém na memória apenas o que está visível
     platforms = platforms.filter(p => p.x + p.width > cameraX - 200);
     hazards = hazards.filter(h => h.x + h.width > cameraX - 200);
 
+    // Morte ocorre APENAS ao tocar em um espinho
     let died = false;
     for (let h of hazards) {
         if (player.collidesWith(h)) died = true;
     }
-    if (player.y > 600) died = true; // Abismo ajustado
 
     if (died) {
         deaths++;
@@ -135,21 +138,26 @@ function gameLoop() {
     ctx.save();
     ctx.translate(-Math.floor(cameraX), 0);
 
+    // 1. Manchas de sangue/tinta
     bloodSplatters.forEach(b => {
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.w, b.h);
     });
 
+    // 2. Chão contínuo (plataformas cinzas)
     ctx.fillStyle = '#7f8c8d';
     platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
 
+    // 3. Espinhos
     ctx.fillStyle = '#c0392b';
     hazards.forEach(h => ctx.fillRect(h.x, h.y, h.width, h.height));
 
+    // 4. Jogador
     player.draw(ctx);
 
     ctx.restore();
 
+    // HUD Fixo
     ctx.fillStyle = '#fff';
     ctx.font = '16px monospace';
     ctx.fillText(`Distância: ${score}m`, 650, 30);

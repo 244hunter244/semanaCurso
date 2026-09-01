@@ -10,7 +10,7 @@ class Player {
         this.vy = 0;
         
         this.speed = 9;
-        this.jumpForce = -13; // Pulo mais alto para facilitar desviar dos espinhos
+        this.jumpForce = -13;
         this.gravity = 0.55;
         this.isGrounded = false;
         this.isTouchingWall = false;
@@ -70,7 +70,7 @@ class Player {
                 this.isGrounded = false;
                 this.canJump = false;
             } else if (this.isTouchingWall && this.vy > 0) {
-                this.vy = this.jumpForce * 1.1; // Pulo mais forte na parede
+                this.vy = this.jumpForce * 1.1;
                 this.vx = -this.wallSide * 10;
                 this.x += -this.wallSide * 6;
                 this.isTouchingWall = false;
@@ -80,6 +80,10 @@ class Player {
         }
 
         this.x += this.vx;
+        
+        // Impede de sair pelo canto esquerdo do mundo
+        if (this.x < 0) this.x = 0;
+
         this.checkCollisionsX(platforms);
 
         this.y += this.vy;
