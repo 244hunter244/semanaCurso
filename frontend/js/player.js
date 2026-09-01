@@ -14,48 +14,66 @@ class Player {
         this.isGrounded = false;
         this.isTouchingWall = false;
         this.wallSide = 0; // -1 (parede na esquerda), 1 (parede na direita)
+
+        // Trava para impedir que segurar botões anule o impulso do Wall Jump
+        this.wallJumpTimer = 0;
+        this.canJump = true; 
     }
 
     update(keys, platforms) {
-        // Movimentação Horizontal Base
-        if (keys['ArrowRight'] || keys['KeyD']) this.vx = this.speed;
-        else if (keys['ArrowLeft'] || keys['KeyA']) this.vx = -this.speed;
-        else this.vx = 0;
+        // Reduz a trava do wall jump a cada frame
+        if (this.wallJumpTimer > 0) {
+            this.wallJumpTimer--;
+        } else {
+            // Movimentação horizontal normal só funciona quando não está travado pelo wall jump
+            if (keys['ArrowRight'] || keys['KeyD']) this.vx = this.speed;
+            else if (keys['ArrowLeft'] || keys['KeyA']) this.vx = -this.speed;
+            else this.vx = 0;
+        }
 
         // Aplicação de Gravidade
         this.vy += this.gravity;
 
-        // Deslizar na parede (Wall Slide)
+        // Deslizar na parede (APENAS se estiver caindo)
         if (this.isTouchingWall && !this.isGrounded && this.vy > 0) {
-            this.vy = 1.5; // Reduz a velocidade de queda ao deslizar
+            this.vy = 2; // Mantém uma queda suave na parede
         }
 
-        // Pulo e Wall Jump
-        if (keys['Space'] || keys['ArrowUp'] || keys['KeyW']) {
+        // Controle para aceitar novo pulo apenas após soltar e apertar a tecla de novo
+        const isJumpPressed = keys['Space'] || keys['ArrowUp'] || keys['KeyW'];
+
+        if (!isJumpPressed) {
+            this.canJump = true; // Libera o pulo quando a tecla é solta
+        }
+
+        // Lógica de Pulo / Wall Jump
+        if (isJumpPressed && this.canJump) {
             if (this.isGrounded) {
                 this.vy = this.jumpForce;
                 this.isGrounded = false;
-            } else if (this.isTouchingWall) {
-                // Aplica força para cima E para o lado oposto da parede
+                this.canJump = false; 
+            } else if (this.isTouchingWall && this.vy > 0) { // Só faz wall jump se estiver deslizando/caindo na parede
                 this.vy = this.jumpForce;
-                this.vx = -this.wallSide * (this.speed * 1.8);
                 
-                // Descola o jogador da parede na hora para não prender no colisor
-                this.x += -this.wallSide * 2; 
+                // Arremessa o jogador com força para o lado oposto da parede
+                this.vx = -this.wallSide * 8; 
+                
+                // Descola o jogador para fora da hitbox da parede
+                this.x += -this.wallSide * 5; 
+                
                 this.isTouchingWall = false;
+                this.canJump = false;
 
-                // Consome a tecla temporariamente para não anular a física
-                keys['Space'] = false;
-                keys['ArrowUp'] = false;
-                keys['KeyW'] = false;
+                // Trava o controle direcional por ~9 frames (150ms) para garantir a repulsão
+                this.wallJumpTimer = 9; 
             }
         }
 
-        // Atualiza X e checa colisões laterais
+        // Aplica e verifica colisão em X
         this.x += this.vx;
         this.checkCollisionsX(platforms);
 
-        // Atualiza Y e checa colisões verticais
+        // Aplica e verifica colisão em Y
         this.y += this.vy;
         this.checkCollisionsY(platforms);
     }
@@ -67,11 +85,11 @@ class Player {
                 if (this.vx > 0) {
                     this.x = p.x - this.width;
                     this.isTouchingWall = true;
-                    this.wallSide = 1; // Parede à direita
+                    this.wallSide = 1;
                 } else if (this.vx < 0) {
                     this.x = p.x + p.width;
                     this.isTouchingWall = true;
-                    this.wallSide = -1; // Parede à esquerda
+                    this.wallSide = -1;
                 }
                 this.vx = 0;
             }
@@ -106,6 +124,8 @@ class Player {
         this.y = this.startY;
         this.vx = 0;
         this.vy = 0;
+        this.wallJumpTimer = 0;
+        this.canJump = true;
     }
 
     draw(ctx) {
