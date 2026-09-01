@@ -13,67 +13,68 @@ class Player {
         this.gravity = 0.5;
         this.isGrounded = false;
         this.isTouchingWall = false;
-        this.wallSide = 0; // -1 (parede na esquerda), 1 (parede na direita)
+        this.wallSide = 0;
 
-        // Trava para impedir que segurar botões anule o impulso do Wall Jump
         this.wallJumpTimer = 0;
         this.canJump = true; 
+        
+        // Histórico de posições para o rastro em movimento
+        this.trail = [];
     }
 
-    update(keys, platforms) {
-        // Reduz a trava do wall jump a cada frame
+    update(keys, platforms, bloodSplatters) {
+        // Guarda a posição atual para desenhar o rastro em movimento
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > 8) this.trail.shift(); // Mantém apenas os últimos 8 frames
+
+        // Se estiver deslizando na parede, deixa marcas permanentes nela!
+        if (this.isTouchingWall && !this.isGrounded && this.vy > 0 && Math.random() > 0.4) {
+            bloodSplatters.push({
+                x: this.wallSide === 1 ? this.x + this.width - 2 : this.x - 2,
+                y: this.y + Math.random() * this.height,
+                size: Math.random() * 4 + 2,
+                color: '#900c3f'
+            });
+        }
+
         if (this.wallJumpTimer > 0) {
             this.wallJumpTimer--;
         } else {
-            // Movimentação horizontal normal só funciona quando não está travado pelo wall jump
             if (keys['ArrowRight'] || keys['KeyD']) this.vx = this.speed;
             else if (keys['ArrowLeft'] || keys['KeyA']) this.vx = -this.speed;
             else this.vx = 0;
         }
 
-        // Aplicação de Gravidade
         this.vy += this.gravity;
 
-        // Deslizar na parede (APENAS se estiver caindo)
         if (this.isTouchingWall && !this.isGrounded && this.vy > 0) {
-            this.vy = 2; // Mantém uma queda suave na parede
+            this.vy = 2;
         }
 
-        // Controle para aceitar novo pulo apenas após soltar e apertar a tecla de novo
         const isJumpPressed = keys['Space'] || keys['ArrowUp'] || keys['KeyW'];
 
         if (!isJumpPressed) {
-            this.canJump = true; // Libera o pulo quando a tecla é solta
+            this.canJump = true;
         }
 
-        // Lógica de Pulo / Wall Jump
         if (isJumpPressed && this.canJump) {
             if (this.isGrounded) {
                 this.vy = this.jumpForce;
                 this.isGrounded = false;
                 this.canJump = false; 
-            } else if (this.isTouchingWall && this.vy > 0) { // Só faz wall jump se estiver deslizando/caindo na parede
+            } else if (this.isTouchingWall && this.vy > 0) {
                 this.vy = this.jumpForce;
-                
-                // Arremessa o jogador com força para o lado oposto da parede
                 this.vx = -this.wallSide * 8; 
-                
-                // Descola o jogador para fora da hitbox da parede
                 this.x += -this.wallSide * 5; 
-                
                 this.isTouchingWall = false;
                 this.canJump = false;
-
-                // Trava o controle direcional por ~9 frames (150ms) para garantir a repulsão
                 this.wallJumpTimer = 9; 
             }
         }
 
-        // Aplica e verifica colisão em X
         this.x += this.vx;
         this.checkCollisionsX(platforms);
 
-        // Aplica e verifica colisão em Y
         this.y += this.vy;
         this.checkCollisionsY(platforms);
     }
@@ -126,9 +127,18 @@ class Player {
         this.vy = 0;
         this.wallJumpTimer = 0;
         this.canJump = true;
+        this.trail = [];
     }
 
     draw(ctx) {
+        // Desenha o rastro em movimento com transparência
+        this.trail.forEach((pos, index) => {
+            const alpha = (index + 1) / this.trail.length;
+            ctx.fillStyle = `rgba(192, 57, 43, ${alpha * 0.4})`;
+            ctx.fillRect(pos.x, pos.y, this.width, this.height);
+        });
+
+        // Desenha o jogador principal
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }
