@@ -9,10 +9,9 @@ class Player {
         this.vx = 0;
         this.vy = 0;
         
-        // AJUSTES DE VELOCIDADE:
-        this.speed = 9;         // Aumentado de 5 para 9 (muito mais rápido)
-        this.jumpForce = -11;   // Força de pulo aumentada para acompanhar a velocidade
-        this.gravity = 0.5;
+        this.speed = 9;
+        this.jumpForce = -13; // Pulo mais alto para facilitar desviar dos espinhos
+        this.gravity = 0.55;
         this.isGrounded = false;
         this.isTouchingWall = false;
         this.wallSide = 0;
@@ -71,12 +70,12 @@ class Player {
                 this.isGrounded = false;
                 this.canJump = false;
             } else if (this.isTouchingWall && this.vy > 0) {
-                this.vy = this.jumpForce;
+                this.vy = this.jumpForce * 1.1; // Pulo mais forte na parede
                 this.vx = -this.wallSide * 10;
-                this.x += -this.wallSide * 5;
+                this.x += -this.wallSide * 6;
                 this.isTouchingWall = false;
                 this.canJump = false;
-                this.wallJumpTimer = 9;
+                this.wallJumpTimer = 10;
             }
         }
 
