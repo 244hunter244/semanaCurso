@@ -1,0 +1,32 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #121212;
+    color: #fff;
+    font-family: monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#game-container {
+    position: relative;
+}
+
+canvas {
+    border: 4px solid #fff;
+    background-color: #222;
+}
+
+#hud {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    font-size: 20px;
+    font-weight: bold;
+}
